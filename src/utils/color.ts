@@ -21,7 +21,7 @@ export function averageColor(
   regionY: number,
   regionW: number,
   regionH: number,
-): { r: number; g: number; b: number; a: number; lum: number } {
+): { r: number; g: number; b: number; a: number; lum: number; vR: number; vG: number; vB: number } {
   let totalR = 0, totalG = 0, totalB = 0, totalA = 0;
   let fgR = 0, fgG = 0, fgB = 0, fgCount = 0;
   let count = 0;
@@ -45,9 +45,9 @@ export function averageColor(
       totalA += a;
       count++;
 
-      // Vibrant color sampling: ignore very dark or transparent pixels
+      // Vibrant color sampling: ignore black or transparent pixels
       const l = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-      if (a > 20 && l > 0.1) {
+      if (a > 20 && l > 0.01) {
         fgR += r;
         fgG += g;
         fgB += b;

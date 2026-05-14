@@ -169,9 +169,9 @@ export function processHalftone(
       }
 
       // Determine dot color
-      const dotR = settings.preserveColor ? Math.round(avg.r) : 0;
-      const dotG = settings.preserveColor ? Math.round(avg.g) : 0;
-      const dotB = settings.preserveColor ? Math.round(avg.b) : 0;
+      const dotR = settings.preserveColor ? Math.round(avg.vR) : 0;
+      const dotG = settings.preserveColor ? Math.round(avg.vG) : 0;
+      const dotB = settings.preserveColor ? Math.round(avg.vB) : 0;
       const dotA = Math.round(avg.a);
 
       if (useCanvas && ctx) {
