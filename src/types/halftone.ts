@@ -45,6 +45,10 @@ export interface HalftoneSettings {
   maxResolution: number;
   /** Enable automatic resize for large images */
   autoResize: boolean;
+  /** Target background type ('light' for white paper, 'dark' for black shirts) */
+  targetBackground: 'light' | 'dark';
+  /** Brightness boost for highlights (1.0 = normal, >1.0 = punchier whites) */
+  brightnessBoost: number;
 }
 
 /**
@@ -53,12 +57,12 @@ export interface HalftoneSettings {
 export const DEFAULT_SETTINGS: HalftoneSettings = {
   gridSize: 12,
   angle: 45,
-  maxDotRadius: 6,
-  density: 0.8,
+  maxDotRadius: 8,
+  density: 1.0,
   threshold: 0.5,
   manualValues: {
     size: 12,
-    density: 0.8,
+    density: 1.0,
     threshold: 0.5,
     smoothing: 1,
   },
@@ -70,6 +74,8 @@ export const DEFAULT_SETTINGS: HalftoneSettings = {
   supersample: 1,
   maxResolution: 2500,
   autoResize: true,
+  targetBackground: 'dark',
+  brightnessBoost: 1.0,
 };
 
 /**

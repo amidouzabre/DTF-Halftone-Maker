@@ -151,14 +151,21 @@ export function processHalftone(
       // Skip transparent areas
       if (avg.a < 10) continue;
 
-      // Calculate dot size based on darkness (1 - luminance = darkness)
-      const darkness = 1 - avg.lum;
+      // Apply brightness boost and clamp
+      const rawIntensity = settings.targetBackground === 'dark' 
+        ? avg.lum 
+        : 1 - avg.lum;
+      
+      const intensity = Math.min(1, rawIntensity * settings.brightnessBoost);
+      
+      // Apply threshold - skip dots in areas that should be empty
+      // In light mode, this means skipping light areas (intensity near 0)
+      // In dark mode, this means skipping dark areas (intensity near 0)
+      if (intensity < (1 - threshold)) continue;
 
-      // Apply threshold - skip dots in light areas
-      if (darkness < (1 - threshold)) continue;
-
-      // Calculate radius proportional to darkness
-      let dotRadius = maxRadius * darkness * density;
+      // Calculate radius proportional to SQRT of intensity for correct area scaling
+      // Without sqrt, area coverage is quadratically smaller than intended.
+      let dotRadius = maxRadius * Math.sqrt(intensity) * density;
 
       // Clamp to reasonable bounds
       dotRadius = Math.max(0.5, Math.min(dotRadius, maxRadius));
@@ -169,9 +176,11 @@ export function processHalftone(
       }
 
       // Determine dot color
-      const dotR = settings.preserveColor ? Math.round(avg.vR) : 0;
-      const dotG = settings.preserveColor ? Math.round(avg.vG) : 0;
-      const dotB = settings.preserveColor ? Math.round(avg.vB) : 0;
+      // In dark mode, default ink is white. In light mode, default ink is black.
+      const defaultInk = settings.targetBackground === 'dark' ? 255 : 0;
+      const dotR = settings.preserveColor ? Math.round(avg.vR) : defaultInk;
+      const dotG = settings.preserveColor ? Math.round(avg.vG) : defaultInk;
+      const dotB = settings.preserveColor ? Math.round(avg.vB) : defaultInk;
       const dotA = Math.round(avg.a);
 
       if (useCanvas && ctx) {

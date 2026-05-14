@@ -526,6 +526,40 @@ body {
   box-shadow: var(--shadow-glow);
 }
 
+/* Target selector */
+.target-selector {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-deep);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.target-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.target-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.target-btn--active {
+  color: white;
+  background: var(--accent-gradient) !important;
+  box-shadow: var(--shadow-sm);
+}
+
 /* ============================================================
    Shape Selector
    ============================================================ */

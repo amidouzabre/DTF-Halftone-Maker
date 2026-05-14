@@ -180,6 +180,25 @@ function updateManual(key: string, value: number) {
       </button>
       <div v-show="sections.color" class="section-content">
         <div class="control-row">
+          <label class="control-label">Cible d'impression</label>
+          <div class="target-selector">
+            <button 
+              class="target-btn" 
+              :class="{ 'target-btn--active': settings.targetBackground === 'dark' }" 
+              @click="update({ targetBackground: 'dark' })"
+            >
+              Vêtement Sombre
+            </button>
+            <button 
+              class="target-btn" 
+              :class="{ 'target-btn--active': settings.targetBackground === 'light' }" 
+              @click="update({ targetBackground: 'light' })"
+            >
+              Vêtement Clair
+            </button>
+          </div>
+        </div>
+        <div class="control-row">
           <label class="toggle-row">
             <input type="checkbox" :checked="settings.preserveColor" @change="update({ preserveColor: ($event.target as HTMLInputElement).checked })" class="toggle-checkbox" />
             <span class="toggle-label">Conserver la couleur</span>
@@ -196,6 +215,13 @@ function updateManual(key: string, value: number) {
           <div class="control-input-group">
             <input type="range" min="0.01" max="0.5" step="0.01" :value="settings.blackThreshold" @input="update({ blackThreshold: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
             <input type="number" min="0.01" max="0.5" step="0.01" :value="settings.blackThreshold" @change="update({ blackThreshold: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
+          </div>
+        </div>
+        <div class="control-row">
+          <label class="control-label">Luminosité des blancs</label>
+          <div class="control-input-group">
+            <input type="range" min="1" max="2" step="0.05" :value="settings.brightnessBoost" @input="update({ brightnessBoost: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
+            <input type="number" min="1" max="2" step="0.05" :value="settings.brightnessBoost" @change="update({ brightnessBoost: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
           </div>
         </div>
       </div>
