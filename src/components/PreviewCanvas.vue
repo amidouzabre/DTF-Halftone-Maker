@@ -7,6 +7,8 @@ const props = defineProps<{
   isProcessing: boolean;
   progress: number;
   hasImage: boolean;
+  supportColor: string;
+  showCheckerboard: boolean;
 }>();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -77,7 +79,9 @@ watch(() => props.resultDataUrl, (url) => {
 
       <!-- Canvas with checkerboard -->
       <div
-        class="preview-canvas-wrapper checkerboard"
+        class="preview-canvas-wrapper"
+        :class="{ 'checkerboard': showCheckerboard }"
+        :style="{ backgroundColor: showCheckerboard ? '' : supportColor }"
         @mousedown="onMouseDown"
         @mousemove="onMouseMove"
         @mouseup="onMouseUp"

@@ -560,6 +560,52 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+/* Support Color */
+.support-color-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.support-color-picker {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  background-color: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+}
+
+.support-color-picker::-webkit-color-swatch {
+  border: none;
+  border-radius: var(--radius-sm);
+}
+
+.color-presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.preset-btn:hover {
+  transform: scale(1.15);
+  border-color: var(--text-secondary);
+}
+
 /* ============================================================
    Shape Selector
    ============================================================ */

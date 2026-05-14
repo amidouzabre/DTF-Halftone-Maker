@@ -121,6 +121,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown));
           :isProcessing="isProcessing"
           :progress="progress"
           :hasImage="!!imageInfo"
+          :supportColor="settings.supportColor"
+          :showCheckerboard="settings.showCheckerboard"
         />
       </main>
     </div>

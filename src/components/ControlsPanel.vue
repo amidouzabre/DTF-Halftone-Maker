@@ -199,6 +199,33 @@ function updateManual(key: string, value: number) {
           </div>
         </div>
         <div class="control-row">
+          <label class="control-label">Couleur du support</label>
+          <div class="support-color-container">
+            <input 
+              type="color" 
+              :value="settings.supportColor" 
+              @input="update({ supportColor: ($event.target as HTMLInputElement).value })"
+              class="support-color-picker"
+            />
+            <div class="color-presets">
+              <button 
+                v-for="color in ['#ffffff', '#1a1a1a', '#1b2737', '#b22222', '#4169e1', '#ffc0cb']" 
+                :key="color"
+                class="preset-btn"
+                :style="{ backgroundColor: color }"
+                :title="color"
+                @click="update({ supportColor: color })"
+              ></button>
+            </div>
+          </div>
+        </div>
+        <div class="control-row">
+          <label class="toggle-row">
+            <input type="checkbox" :checked="settings.showCheckerboard" @change="update({ showCheckerboard: ($event.target as HTMLInputElement).checked })" class="toggle-checkbox" />
+            <span class="toggle-label">Afficher le damier</span>
+          </label>
+        </div>
+        <div class="control-row">
           <label class="toggle-row">
             <input type="checkbox" :checked="settings.preserveColor" @change="update({ preserveColor: ($event.target as HTMLInputElement).checked })" class="toggle-checkbox" />
             <span class="toggle-label">Conserver la couleur</span>

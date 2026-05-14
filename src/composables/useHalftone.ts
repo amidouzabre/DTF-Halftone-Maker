@@ -140,6 +140,21 @@ export function useHalftone() {
     // Save current state to history before changing
     history.push({ ...settings });
 
+    // Auto-adjust targetBackground if supportColor is changed
+    if (partial.supportColor !== undefined) {
+      const hex = partial.supportColor;
+      const r = parseInt(hex.slice(1, 3), 16) / 255;
+      const g = parseInt(hex.slice(3, 5), 16) / 255;
+      const b = parseInt(hex.slice(5, 7), 16) / 255;
+      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      
+      // If the user didn't explicitly change targetBackground in this update,
+      // suggest the best one based on support color luminance.
+      if (partial.targetBackground === undefined) {
+        partial.targetBackground = lum < 0.5 ? 'dark' : 'light';
+      }
+    }
+
     Object.assign(settings, partial);
 
     if (imageLoader.imageData.value) {

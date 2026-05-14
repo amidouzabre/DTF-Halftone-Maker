@@ -49,6 +49,10 @@ export interface HalftoneSettings {
   targetBackground: 'light' | 'dark';
   /** Brightness boost for highlights (1.0 = normal, >1.0 = punchier whites) */
   brightnessBoost: number;
+  /** Garment/Support color for preview (e.g. #FFFFFF for white shirt) */
+  supportColor: string;
+  /** Show checkerboard behind the image in preview */
+  showCheckerboard: boolean;
 }
 
 /**
@@ -76,6 +80,8 @@ export const DEFAULT_SETTINGS: HalftoneSettings = {
   autoResize: true,
   targetBackground: 'dark',
   brightnessBoost: 1.0,
+  supportColor: '#1a1a1a',
+  showCheckerboard: true,
 };
 
 /**
