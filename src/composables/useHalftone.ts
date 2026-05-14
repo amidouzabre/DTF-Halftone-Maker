@@ -1,0 +1,355 @@
+/**
+ * Main halftone processing orchestrator composable.
+ * 
+ * Manages the connection between UI settings, the Web Worker,
+ * and the output canvas. Provides debounced processing for
+ * real-time preview.
+ */
+
+import { ref, reactive, watch, onUnmounted } from 'vue';
+import type { HalftoneSettings, WorkerMessage, WorkerResponse } from '../types/halftone';
+import { DEFAULT_SETTINGS } from '../types/halftone';
+import { useHistory } from './useHistory';
+import { useImageLoader } from './useImageLoader';
+
+export function useHalftone() {
+  // Settings
+  const settings = reactive<HalftoneSettings>({ ...DEFAULT_SETTINGS });
+
+  // Image handling
+  const imageLoader = useImageLoader();
+
+  // History
+  const history = useHistory();
+
+  // Processing state
+  const isProcessing = ref(false);
+  const progress = ref(0);
+  const resultImageData = ref<ImageData | null>(null);
+  const resultDataUrl = ref<string | null>(null);
+
+  // Worker
+  let worker: Worker | null = null;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Initialize the Web Worker.
+   */
+  function initWorker(): void {
+    if (worker) return;
+
+    worker = new Worker(
+      new URL('../workers/halftone.worker.ts', import.meta.url),
+      { type: 'module' },
+    );
+
+    worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+      const response = event.data;
+
+      switch (response.type) {
+        case 'progress':
+          progress.value = response.progress ?? 0;
+          break;
+
+        case 'complete':
+          if (response.imageData && response.width && response.height) {
+            const data = new Uint8ClampedArray(response.imageData);
+            resultImageData.value = new ImageData(new Uint8ClampedArray(data.buffer as ArrayBuffer), response.width, response.height);
+            renderResultToDataUrl(response.width, response.height, data);
+          }
+          isProcessing.value = false;
+          progress.value = 100;
+          break;
+
+        case 'error':
+          console.error('Worker error:', response.error);
+          isProcessing.value = false;
+          progress.value = 0;
+          break;
+      }
+    };
+
+    worker.onerror = (err) => {
+      console.error('Worker crashed:', err);
+      isProcessing.value = false;
+      progress.value = 0;
+    };
+  }
+
+  /**
+   * Render result pixel data to a data URL for display and export.
+   */
+  function renderResultToDataUrl(
+    width: number,
+    height: number,
+    data: Uint8ClampedArray,
+  ): void {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const imgData = new ImageData(new Uint8ClampedArray(data.buffer as ArrayBuffer), width, height);
+    ctx.putImageData(imgData, 0, 0);
+    resultDataUrl.value = canvas.toDataURL('image/png');
+  }
+
+  /**
+   * Send image data to the worker for processing.
+   */
+  function processImage(): void {
+    if (!imageLoader.imageData.value) return;
+
+    initWorker();
+    if (!worker) return;
+
+    isProcessing.value = true;
+    progress.value = 0;
+
+    const imgData = imageLoader.imageData.value;
+    const buffer = imgData.data.buffer.slice(0);
+
+    const message: WorkerMessage = {
+      type: 'process',
+      imageData: buffer,
+      width: imgData.width,
+      height: imgData.height,
+      settings: JSON.parse(JSON.stringify(settings)),
+    };
+
+    worker.postMessage(message, [buffer]);
+  }
+
+  /**
+   * Process with debounce for real-time preview.
+   */
+  function processDebounced(delay = 300): void {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      processImage();
+    }, delay);
+  }
+
+  /**
+   * Update settings and trigger reprocessing.
+   */
+  function updateSettings(partial: Partial<HalftoneSettings>): void {
+    // Save current state to history before changing
+    history.push({ ...settings });
+
+    Object.assign(settings, partial);
+
+    if (imageLoader.imageData.value) {
+      processDebounced();
+    }
+  }
+
+  /**
+   * Undo the last settings change.
+   */
+  function undo(): void {
+    const previous = history.undo({ ...settings });
+    if (previous) {
+      Object.assign(settings, previous);
+      if (imageLoader.imageData.value) {
+        processDebounced(100);
+      }
+    }
+  }
+
+  /**
+   * Redo the last undone settings change.
+   */
+  function redo(): void {
+    const next = history.redo({ ...settings });
+    if (next) {
+      Object.assign(settings, next);
+      if (imageLoader.imageData.value) {
+        processDebounced(100);
+      }
+    }
+  }
+
+  /**
+   * Reset all settings to defaults.
+   */
+  function resetSettings(): void {
+    history.push({ ...settings });
+    Object.assign(settings, { ...DEFAULT_SETTINGS });
+    if (imageLoader.imageData.value) {
+      processDebounced(100);
+    }
+  }
+
+  /**
+   * Export the current result as a PNG file download.
+   */
+  function exportPNG(): void {
+    if (!resultImageData.value) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = resultImageData.value.width;
+    canvas.height = resultImageData.value.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.putImageData(resultImageData.value, 0, 0);
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+
+      const fileName = imageLoader.imageInfo.value?.fileName || 'image';
+      const baseName = fileName.replace(/\.[^.]+$/, '');
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${baseName}_halftone.png`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }, 'image/png');
+  }
+
+  /**
+   * Export the current result as an approximate SVG.
+   */
+  function exportSVG(): void {
+    if (!imageLoader.imageData.value) return;
+
+    const imgData = imageLoader.imageData.value;
+    const width = imgData.width;
+    const height = imgData.height;
+    const sourceData = imgData.data;
+
+    const gridSize = settings.useManualValues ? settings.manualValues.size : settings.gridSize;
+    const maxRadius = settings.maxDotRadius;
+    const density = settings.useManualValues ? settings.manualValues.density : settings.density;
+    const threshold = settings.useManualValues ? settings.manualValues.threshold : settings.threshold;
+
+
+    let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">\n`;
+
+    // Simple grid iteration (no rotation for SVG simplicity)
+    for (let y = 0; y < height; y += gridSize) {
+      for (let x = 0; x < width; x += gridSize) {
+        // Sample average color
+        let totalR = 0, totalG = 0, totalB = 0, count = 0;
+        for (let sy = y; sy < Math.min(y + gridSize, height); sy++) {
+          for (let sx = x; sx < Math.min(x + gridSize, width); sx++) {
+            const idx = (sy * width + sx) * 4;
+            totalR += sourceData[idx];
+            totalG += sourceData[idx + 1];
+            totalB += sourceData[idx + 2];
+            count++;
+          }
+        }
+
+        const r = Math.round(totalR / count);
+        const g = Math.round(totalG / count);
+        const b = Math.round(totalB / count);
+        const lum = 0.2126 * (r / 255) + 0.7152 * (g / 255) + 0.0722 * (b / 255);
+        const darkness = 1 - lum;
+
+        if (darkness < (1 - threshold)) continue;
+
+        const dotRadius = maxRadius * darkness * density;
+        const cx = x + gridSize / 2;
+        const cy_pos = y + gridSize / 2;
+        const color = settings.preserveColor ? `rgb(${r},${g},${b})` : '#000';
+
+        switch (settings.dotShape) {
+          case 'round':
+            svgContent += `  <circle cx="${cx}" cy="${cy_pos}" r="${dotRadius.toFixed(1)}" fill="${color}" transform="rotate(${settings.angle} ${cx} ${cy_pos})"/>\n`;
+            break;
+          case 'square':
+            svgContent += `  <rect x="${(cx - dotRadius).toFixed(1)}" y="${(cy_pos - dotRadius).toFixed(1)}" width="${(dotRadius * 2).toFixed(1)}" height="${(dotRadius * 2).toFixed(1)}" fill="${color}" transform="rotate(${settings.angle} ${cx} ${cy_pos})"/>\n`;
+            break;
+          case 'ellipse':
+            svgContent += `  <ellipse cx="${cx}" cy="${cy_pos}" rx="${dotRadius.toFixed(1)}" ry="${(dotRadius * 0.5).toFixed(1)}" fill="${color}" transform="rotate(${settings.angle} ${cx} ${cy_pos})"/>\n`;
+            break;
+          case 'diamond':
+            svgContent += `  <polygon points="${cx},${cy_pos - dotRadius} ${cx + dotRadius},${cy_pos} ${cx},${cy_pos + dotRadius} ${cx - dotRadius},${cy_pos}" fill="${color}" transform="rotate(${settings.angle} ${cx} ${cy_pos})"/>\n`;
+            break;
+          case 'line':
+            const lw = dotRadius * 0.35;
+            svgContent += `  <rect x="${(cx - dotRadius).toFixed(1)}" y="${(cy_pos - lw).toFixed(1)}" width="${(dotRadius * 2).toFixed(1)}" height="${(lw * 2).toFixed(1)}" fill="${color}" transform="rotate(${settings.angle} ${cx} ${cy_pos})"/>\n`;
+            break;
+        }
+      }
+    }
+
+    svgContent += '</svg>';
+
+    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+    const fileName = imageLoader.imageInfo.value?.fileName || 'image';
+    const baseName = fileName.replace(/\.[^.]+$/, '');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${baseName}_halftone.svg`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  /**
+   * Load an image file and start processing.
+   */
+  async function loadAndProcess(
+    file: File,
+  ): Promise<void> {
+    await imageLoader.loadImage(file, settings.maxResolution, settings.autoResize);
+    if (imageLoader.imageData.value) {
+      processImage();
+    }
+  }
+
+  /**
+   * Watch for settings changes for auto-preview.
+   */
+  watch(
+    () => ({ ...settings }),
+    () => {
+      // Auto-process handled by updateSettings
+    },
+    { deep: true },
+  );
+
+  // Cleanup
+  onUnmounted(() => {
+    if (worker) {
+      worker.terminate();
+      worker = null;
+    }
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+  });
+
+  return {
+    // Settings
+    settings,
+    updateSettings,
+    resetSettings,
+
+    // Image
+    ...imageLoader,
+    loadAndProcess,
+
+    // Processing
+    isProcessing,
+    progress,
+    resultImageData,
+    resultDataUrl,
+    processImage,
+
+    // History
+    undo,
+    redo,
+    canUndo: history.canUndo,
+    canRedo: history.canRedo,
+
+    // Export
+    exportPNG,
+    exportSVG,
+  };
+}
