@@ -75,5 +75,5 @@ Une application web de pointe pour transformer vos images en **trames demi-teint
 ---
 
 ## 📄 License
-MIT © [Your Name]
+MIT © [Amidou ZABRE]
 
