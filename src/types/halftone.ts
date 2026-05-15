@@ -4,6 +4,17 @@
 export type DotShape = 'round' | 'square' | 'ellipse' | 'diamond' | 'line';
 
 /**
+ * Processing methods for halftone or bitmap conversion.
+ */
+export type ProcessingMethod = 'halftone' | 'threshold' | 'dither';
+
+/**
+ * Dithering algorithms.
+ */
+export type DitherType = 'floyd-steinberg' | 'ordered';
+
+
+/**
  * Manual override values for fine-tuning halftone output.
  */
 export interface ManualValues {
@@ -37,6 +48,8 @@ export interface HalftoneSettings {
   preserveColor: boolean;
   /** Make near-black dots transparent (for DTF) */
   makeBlackTransparent: boolean;
+  /** Make near-white dots transparent (for DTF) */
+  makeWhiteTransparent: boolean;
   /** Luminance threshold below which pixels are considered "black" (0–1) */
   blackThreshold: number;
   /** Supersampling factor for anti-aliasing (1, 2, or 4) */
@@ -55,6 +68,30 @@ export interface HalftoneSettings {
   showCheckerboard: boolean;
   /** Enable garment mockup mode */
   mockupMode: boolean;
+  /** Input Levels: Black point (0–255) */
+  levelsBlack: number;
+  /** Input Levels: Mid point / Gamma (0.01–9.99) */
+  levelsMid: number;
+  /** Input Levels: White point (0–255) */
+  levelsWhite: number;
+  /** Output Levels: Black point (0–255) */
+  outputLevelsBlack: number;
+  /** Output Levels: White point (0–255) */
+  outputLevelsWhite: number;
+  /** Target Frequency in Lines Per Inch (LPI) */
+  frequency: number;
+  /** Image resolution for LPI calculation */
+  dpi: number;
+  /** Primary processing method */
+  method: ProcessingMethod;
+  /** Dithering algorithm (if method is 'dither') */
+  ditherType: DitherType;
+  /** Conversion threshold level (0–255) for 'threshold' method */
+  thresholdLevel: number;
+  /** Luminance threshold above which pixels are considered "white" (0–1) */
+  whiteThreshold: number;
+  /** Scale factor for ordered dither pattern (1, 2, 4) */
+  ditherScale: number;
 }
 
 /**
@@ -76,6 +113,7 @@ export const DEFAULT_SETTINGS: HalftoneSettings = {
   dotShape: 'round',
   preserveColor: true,
   makeBlackTransparent: true,
+  makeWhiteTransparent: false,
   blackThreshold: 0.15,
   supersample: 1,
   maxResolution: 2500,
@@ -85,6 +123,18 @@ export const DEFAULT_SETTINGS: HalftoneSettings = {
   supportColor: '#1a1a1a',
   showCheckerboard: false,
   mockupMode: false,
+  levelsBlack: 0,
+  levelsMid: 1.0,
+  levelsWhite: 255,
+  outputLevelsBlack: 0,
+  outputLevelsWhite: 255,
+  frequency: 30,
+  dpi: 300,
+  method: 'halftone',
+  ditherType: 'floyd-steinberg',
+  thresholdLevel: 128,
+  whiteThreshold: 0.95,
+  ditherScale: 1,
 };
 
 /**

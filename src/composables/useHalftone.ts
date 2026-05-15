@@ -11,6 +11,7 @@ import type { HalftoneSettings, WorkerMessage, WorkerResponse } from '../types/h
 import { DEFAULT_SETTINGS } from '../types/halftone';
 import { useHistory } from './useHistory';
 import { useImageLoader } from './useImageLoader';
+import { applyLevels } from '../utils/halftone-engine';
 
 export function useHalftone() {
   // Settings
@@ -264,14 +265,26 @@ export function useHalftone() {
         const g = Math.round(totalG / count);
         const b = Math.round(totalB / count);
         const lum = 0.2126 * (r / 255) + 0.7152 * (g / 255) + 0.0722 * (b / 255);
-        const darkness = 1 - lum;
+        
+        const adjustedLum = applyLevels(lum, settings.levelsBlack, settings.levelsWhite, settings.levelsMid, settings.outputLevelsBlack, settings.outputLevelsWhite);
+        const rawIntensity = settings.targetBackground === 'dark' ? adjustedLum : 1 - adjustedLum;
+        const intensity = Math.min(1, rawIntensity * settings.brightnessBoost);
 
-        if (darkness < (1 - threshold)) continue;
+        if (intensity < (1 - threshold)) continue;
 
-        const dotRadius = maxRadius * darkness * density;
+        const dotRadius = maxRadius * Math.sqrt(intensity) * density;
         const cx = x + gridSize / 2;
         const cy_pos = y + gridSize / 2;
-        const color = settings.preserveColor ? `rgb(${r},${g},${b})` : '#000';
+        
+        let color = '#000';
+        if (settings.preserveColor) {
+          const adjR = Math.round(applyLevels(r / 255, settings.levelsBlack, settings.levelsWhite, settings.levelsMid, settings.outputLevelsBlack, settings.outputLevelsWhite) * 255);
+          const adjG = Math.round(applyLevels(g / 255, settings.levelsBlack, settings.levelsWhite, settings.levelsMid, settings.outputLevelsBlack, settings.outputLevelsWhite) * 255);
+          const adjB = Math.round(applyLevels(b / 255, settings.levelsBlack, settings.levelsWhite, settings.levelsMid, settings.outputLevelsBlack, settings.outputLevelsWhite) * 255);
+          color = `rgb(${adjR},${adjG},${adjB})`;
+        } else {
+          color = settings.targetBackground === 'dark' ? '#fff' : '#000';
+        }
 
         switch (settings.dotShape) {
           case 'round':

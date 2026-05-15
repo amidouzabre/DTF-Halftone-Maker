@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import type { HalftoneSettings, DotShape } from '../types/halftone';
 import DotShapeSelector from './DotShapeSelector.vue';
+import Histogram from './Histogram.vue';
 
 const props = defineProps<{
   settings: HalftoneSettings;
@@ -9,6 +10,7 @@ const props = defineProps<{
   canRedo: boolean;
   isProcessing: boolean;
   hasImage: boolean;
+  sourceImageData: ImageData | null;
 }>();
 
 const emit = defineEmits<{
@@ -20,7 +22,7 @@ const emit = defineEmits<{
 }>();
 
 const sections = ref({
-  grid: true, dots: true, threshold: true,
+  method: true, grid: true, dots: true, levels: true,
   color: true, quality: false, manual: false,
 });
 
@@ -36,6 +38,21 @@ function updateManual(key: string, value: number) {
   emit('update', {
     manualValues: { ...props.settings.manualValues, [key]: value },
   });
+}
+
+function updateFrequency(f: number) {
+  const newGridSize = Math.max(1, Math.round(props.settings.dpi / f));
+  emit('update', { frequency: f, gridSize: newGridSize });
+}
+
+function updateGridSize(g: number) {
+  const newFreq = Math.round(props.settings.dpi / g);
+  emit('update', { gridSize: g, frequency: newFreq });
+}
+
+function updateDpi(d: number) {
+  const newFreq = Math.round(d / props.settings.gridSize);
+  emit('update', { dpi: d, frequency: newFreq });
 }
 </script>
 
@@ -57,22 +74,95 @@ function updateManual(key: string, value: number) {
       </button>
     </div>
 
-    <!-- Grid -->
+    <!-- Conversion Method -->
     <div class="control-section">
+      <button class="section-header" @click="toggle('method')">
+        <span>Mode de conversion (Bitmap)</span>
+        <svg class="section-chevron" :class="{ 'section-chevron--open': sections.method }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div v-show="sections.method" class="section-content">
+        <div class="method-selector">
+          <button 
+            class="method-btn" 
+            :class="{ 'method-btn--active': settings.method === 'threshold' }" 
+            @click="update({ method: 'threshold' })"
+          >
+            Seuil
+          </button>
+          <button 
+            class="method-btn" 
+            :class="{ 'method-btn--active': settings.method === 'dither' }" 
+            @click="update({ method: 'dither' })"
+          >
+            Diffusion (Dither)
+          </button>
+          <button 
+            class="method-btn" 
+            :class="{ 'method-btn--active': settings.method === 'halftone' }" 
+            @click="update({ method: 'halftone' })"
+          >
+            Trame de demi-teintes
+          </button>
+        </div>
+
+        <div v-if="settings.method === 'dither'" class="control-row" style="margin-top: 12px;">
+          <label class="control-label">Algorithme</label>
+          <select 
+            :value="settings.ditherType" 
+            @change="update({ ditherType: ($event.target as HTMLSelectElement).value as any })"
+            class="control-select"
+          >
+            <option value="floyd-steinberg">Floyd-Steinberg (Serré)</option>
+            <option value="ordered">Bayer (Grille ordonnée)</option>
+          </select>
+        </div>
+
+        <div v-if="settings.method === 'dither' && settings.ditherType === 'ordered'" class="control-row" style="margin-top: 8px;">
+          <label class="control-label">Échelle du motif</label>
+          <div class="supersample-selector">
+            <button v-for="val in [1, 2, 4]" :key="val" class="ss-btn" :class="{ 'ss-btn--active': settings.ditherScale === val }" @click="update({ ditherScale: val })">{{ val }}×</button>
+          </div>
+        </div>
+
+        <div v-if="settings.method === 'threshold'" class="control-row" style="margin-top: 12px;">
+          <label class="control-label">Seuil de coupure ({{ settings.thresholdLevel }})</label>
+          <div class="control-input-group">
+            <input type="range" min="0" max="255" step="1" :value="settings.thresholdLevel" @input="update({ thresholdLevel: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
+            <input type="number" min="0" max="255" :value="settings.thresholdLevel" @change="update({ thresholdLevel: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid (only for Halftone) -->
+    <div v-if="settings.method === 'halftone'" class="control-section">
       <button class="section-header" @click="toggle('grid')">
-        <span>Grille</span>
+        <span>Grille de trame</span>
         <svg class="section-chevron" :class="{ 'section-chevron--open': sections.grid }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <div v-show="sections.grid" class="section-content">
         <div class="control-row">
-          <label class="control-label">Taille de la grille</label>
+          <label class="control-label">Fréquence (LPI)</label>
           <div class="control-input-group">
-            <input type="range" min="1" max="50" step="1" :value="settings.gridSize" @input="update({ gridSize: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
-            <input type="number" min="1" max="50" :value="settings.gridSize" @change="update({ gridSize: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
+            <input type="range" min="1" max="150" step="1" :value="settings.frequency" @input="updateFrequency(Number(($event.target as HTMLInputElement).value))" class="control-slider" />
+            <input type="number" min="1" max="150" :value="settings.frequency" @change="updateFrequency(Number(($event.target as HTMLInputElement).value))" class="control-number" />
           </div>
         </div>
         <div class="control-row">
-          <label class="control-label">Angle (°)</label>
+          <label class="control-label">Taille de la cellule (px)</label>
+          <div class="control-input-group">
+            <input type="range" min="1" max="50" step="1" :value="settings.gridSize" @input="updateGridSize(Number(($event.target as HTMLInputElement).value))" class="control-slider" />
+            <input type="number" min="1" max="50" :value="settings.gridSize" @change="updateGridSize(Number(($event.target as HTMLInputElement).value))" class="control-number" />
+          </div>
+        </div>
+        <div class="control-row">
+          <label class="control-label">Résolution d'entrée (DPI)</label>
+          <div class="control-input-group">
+            <input type="number" min="72" max="2400" :value="settings.dpi" @change="updateDpi(Number(($event.target as HTMLInputElement).value))" class="control-number" style="width: 100%" />
+          </div>
+        </div>
+        <div class="control-row">
+          <label class="control-label">Angle d'inclinaison (°)</label>
           <div class="control-input-group">
             <input type="range" min="0" max="360" step="1" :value="settings.angle" @input="update({ angle: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
             <input type="number" min="0" max="360" :value="settings.angle" @change="update({ angle: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
@@ -81,22 +171,22 @@ function updateManual(key: string, value: number) {
       </div>
     </div>
 
-    <!-- Dots -->
-    <div class="control-section">
+    <!-- Dots (only for Halftone) -->
+    <div v-if="settings.method === 'halftone'" class="control-section">
       <button class="section-header" @click="toggle('dots')">
-        <span>Points</span>
+        <span>Forme & Taille des points</span>
         <svg class="section-chevron" :class="{ 'section-chevron--open': sections.dots }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <div v-show="sections.dots" class="section-content">
         <div class="control-row">
-          <label class="control-label">Rayon max du point</label>
+          <label class="control-label">Diamètre max du point</label>
           <div class="control-input-group">
             <input type="range" min="1" max="25" step="0.5" :value="settings.maxDotRadius" @input="update({ maxDotRadius: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
             <input type="number" min="1" max="25" step="0.5" :value="settings.maxDotRadius" @change="update({ maxDotRadius: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
           </div>
         </div>
         <div class="control-row">
-          <label class="control-label">Densité</label>
+          <label class="control-label">Facteur de densité</label>
           <div class="control-input-group">
             <input type="range" min="0.1" max="2" step="0.05" :value="settings.density" @input="update({ density: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
             <input type="number" min="0.1" max="2" step="0.05" :value="settings.density" @change="update({ density: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
@@ -109,18 +199,47 @@ function updateManual(key: string, value: number) {
       </div>
     </div>
 
-    <!-- Threshold -->
+    <!-- Levels -->
     <div class="control-section">
-      <button class="section-header" @click="toggle('threshold')">
-        <span>Seuil & Intensité</span>
-        <svg class="section-chevron" :class="{ 'section-chevron--open': sections.threshold }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <button class="section-header" @click="toggle('levels')">
+        <span>Niveaux (Levels)</span>
+        <svg class="section-chevron" :class="{ 'section-chevron--open': sections.levels }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <div v-show="sections.threshold" class="section-content">
-        <div class="control-row">
-          <label class="control-label">Seuil</label>
-          <div class="control-input-group">
-            <input type="range" min="0" max="1" step="0.01" :value="settings.threshold" @input="update({ threshold: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
-            <input type="number" min="0" max="1" step="0.01" :value="settings.threshold" @change="update({ threshold: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
+      <div v-show="sections.levels" class="section-content">
+        <Histogram 
+          :imageData="sourceImageData" 
+          :levelsBlack="settings.levelsBlack" 
+          :levelsWhite="settings.levelsWhite" 
+          :levelsMid="settings.levelsMid"
+          :outputLevelsBlack="settings.outputLevelsBlack"
+          :outputLevelsWhite="settings.outputLevelsWhite"
+        />
+
+        <div class="levels-group">
+          <div class="levels-group-title">Niveaux d'entrée</div>
+          <div class="control-row">
+            <label class="control-label">Point noir ({{ settings.levelsBlack }})</label>
+            <input type="range" min="0" max="254" step="1" :value="settings.levelsBlack" @input="update({ levelsBlack: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
+          </div>
+          <div class="control-row">
+            <label class="control-label">Gamma ({{ settings.levelsMid }})</label>
+            <input type="range" min="0.01" max="9.99" step="0.01" :value="settings.levelsMid" @input="update({ levelsMid: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
+          </div>
+          <div class="control-row">
+            <label class="control-label">Point blanc ({{ settings.levelsWhite }})</label>
+            <input type="range" min="1" max="255" step="1" :value="settings.levelsWhite" @input="update({ levelsWhite: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
+          </div>
+        </div>
+
+        <div class="levels-group" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+          <div class="levels-group-title">Niveaux de sortie</div>
+          <div class="control-row">
+            <label class="control-label">Noir de sortie ({{ settings.outputLevelsBlack }})</label>
+            <input type="range" min="0" max="255" step="1" :value="settings.outputLevelsBlack" @input="update({ outputLevelsBlack: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
+          </div>
+          <div class="control-row">
+            <label class="control-label">Blanc de sortie ({{ settings.outputLevelsWhite }})</label>
+            <input type="range" min="0" max="255" step="1" :value="settings.outputLevelsWhite" @input="update({ outputLevelsWhite: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
           </div>
         </div>
       </div>
@@ -244,10 +363,23 @@ function updateManual(key: string, value: number) {
           </label>
         </div>
         <div v-if="settings.makeBlackTransparent" class="control-row">
-          <label class="control-label">Seuil noir</label>
+          <label class="control-label">Seuil noir ({{ settings.blackThreshold }})</label>
           <div class="control-input-group">
             <input type="range" min="0.01" max="0.5" step="0.01" :value="settings.blackThreshold" @input="update({ blackThreshold: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
             <input type="number" min="0.01" max="0.5" step="0.01" :value="settings.blackThreshold" @change="update({ blackThreshold: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
+          </div>
+        </div>
+        <div class="control-row">
+          <label class="toggle-row">
+            <input type="checkbox" :checked="settings.makeWhiteTransparent" @change="update({ makeWhiteTransparent: ($event.target as HTMLInputElement).checked })" class="toggle-checkbox" />
+            <span class="toggle-label">Blanc transparent (DTF)</span>
+          </label>
+        </div>
+        <div v-if="settings.makeWhiteTransparent" class="control-row">
+          <label class="control-label">Seuil blanc ({{ settings.whiteThreshold }})</label>
+          <div class="control-input-group">
+            <input type="range" min="0.5" max="0.99" step="0.01" :value="settings.whiteThreshold" @input="update({ whiteThreshold: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
+            <input type="number" min="0.5" max="0.99" step="0.01" :value="settings.whiteThreshold" @change="update({ whiteThreshold: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
           </div>
         </div>
         <div class="control-row">
@@ -287,3 +419,20 @@ function updateManual(key: string, value: number) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.levels-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.levels-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+</style>

@@ -30,6 +30,7 @@ const {
   redo,
   canUndo,
   canRedo,
+  imageData,
   exportPNG,
   exportSVG,
 } = useHalftone();
@@ -96,6 +97,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown));
             :canRedo="canRedo"
             :isProcessing="isProcessing"
             :hasImage="!!imageInfo"
+            :sourceImageData="imageData"
             @update="updateSettings"
             @undo="undo"
             @redo="redo"

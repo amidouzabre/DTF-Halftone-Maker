@@ -80,3 +80,10 @@ export function averageColor(
 export function isNearBlack(r: number, g: number, b: number, threshold: number): boolean {
   return luminance(r / 255, g / 255, b / 255) < threshold;
 }
+
+/**
+ * Determine if a color is near-white based on a luminance threshold.
+ */
+export function isNearWhite(r: number, g: number, b: number, threshold: number): boolean {
+  return luminance(r / 255, g / 255, b / 255) > threshold;
+}
