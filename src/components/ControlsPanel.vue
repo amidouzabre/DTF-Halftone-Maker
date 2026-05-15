@@ -213,6 +213,9 @@ function updateDpi(d: number) {
           :levelsMid="settings.levelsMid"
           :outputLevelsBlack="settings.outputLevelsBlack"
           :outputLevelsWhite="settings.outputLevelsWhite"
+          @update:levelsBlack="v => update({ levelsBlack: v })"
+          @update:levelsWhite="v => update({ levelsWhite: v })"
+          @update:levelsMid="v => update({ levelsMid: v })"
         />
 
         <div class="levels-group">
