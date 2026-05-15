@@ -61,21 +61,21 @@ export interface HalftoneSettings {
  * Default halftone settings.
  */
 export const DEFAULT_SETTINGS: HalftoneSettings = {
-  gridSize: 12,
-  angle: 45,
-  maxDotRadius: 8,
-  density: 1.0,
-  threshold: 0.5,
+  gridSize: 2,
+  angle: 30,
+  maxDotRadius: 1,
+  density: 2.0,
+  threshold: 1.0,
   manualValues: {
-    size: 12,
-    density: 1.0,
-    threshold: 0.5,
+    size: 2,
+    density: 2.0,
+    threshold: 1.0,
     smoothing: 1,
   },
   useManualValues: false,
   dotShape: 'round',
   preserveColor: true,
-  makeBlackTransparent: false,
+  makeBlackTransparent: true,
   blackThreshold: 0.15,
   supersample: 1,
   maxResolution: 2500,
@@ -83,7 +83,7 @@ export const DEFAULT_SETTINGS: HalftoneSettings = {
   targetBackground: 'dark',
   brightnessBoost: 1.0,
   supportColor: '#1a1a1a',
-  showCheckerboard: true,
+  showCheckerboard: false,
   mockupMode: false,
 };
 
