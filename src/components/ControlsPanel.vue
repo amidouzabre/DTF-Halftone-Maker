@@ -67,8 +67,8 @@ function updateManual(key: string, value: number) {
         <div class="control-row">
           <label class="control-label">Taille de la grille</label>
           <div class="control-input-group">
-            <input type="range" min="2" max="50" step="1" :value="settings.gridSize" @input="update({ gridSize: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
-            <input type="number" min="2" max="50" :value="settings.gridSize" @change="update({ gridSize: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
+            <input type="range" min="1" max="50" step="1" :value="settings.gridSize" @input="update({ gridSize: Number(($event.target as HTMLInputElement).value) })" class="control-slider" />
+            <input type="number" min="1" max="50" :value="settings.gridSize" @change="update({ gridSize: Number(($event.target as HTMLInputElement).value) })" class="control-number" />
           </div>
         </div>
         <div class="control-row">
@@ -143,8 +143,8 @@ function updateManual(key: string, value: number) {
           <div class="control-row">
             <label class="control-label">Taille</label>
             <div class="control-input-group">
-              <input type="range" min="2" max="50" step="1" :value="settings.manualValues.size" @input="updateManual('size', Number(($event.target as HTMLInputElement).value))" class="control-slider" />
-              <input type="number" min="2" max="50" :value="settings.manualValues.size" @change="updateManual('size', Number(($event.target as HTMLInputElement).value))" class="control-number" />
+              <input type="range" min="1" max="50" step="1" :value="settings.manualValues.size" @input="updateManual('size', Number(($event.target as HTMLInputElement).value))" class="control-slider" />
+              <input type="number" min="1" max="50" :value="settings.manualValues.size" @change="updateManual('size', Number(($event.target as HTMLInputElement).value))" class="control-number" />
             </div>
           </div>
           <div class="control-row">

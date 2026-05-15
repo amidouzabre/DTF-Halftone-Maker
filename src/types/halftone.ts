@@ -17,7 +17,7 @@ export interface ManualValues {
  * Complete halftone processing settings.
  */
 export interface HalftoneSettings {
-  /** Grid cell size in pixels (4–50) */
+  /** Grid cell size in pixels (1–50) */
   gridSize: number;
   /** Rotation angle of the halftone grid in degrees (0–360) */
   angle: number;

@@ -48,7 +48,7 @@ export function processHalftone(
   const effectiveThreshold = settings.useManualValues
     ? settings.manualValues.threshold
     : settings.threshold;
-  const gridSize = Math.max(2, effectiveGridSize);
+  const gridSize = Math.max(1, effectiveGridSize);
   const angleRad = (settings.angle * Math.PI) / 180;
   const maxRadius = settings.maxDotRadius;
   const density = effectiveDensity;

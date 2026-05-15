@@ -37,18 +37,36 @@ function onMouseMove(e: MouseEvent) {
 }
 function onMouseUp() { isPanning.value = false; }
 
-watch(() => props.resultDataUrl, (url) => {
-  if (!url || !canvasRef.value) return;
+const currentImg = ref<HTMLImageElement | null>(null);
+
+function drawImage() {
+  if (!currentImg.value || !canvasRef.value) return;
   const ctx = canvasRef.value.getContext('2d');
   if (!ctx) return;
+  
+  canvasRef.value.width = currentImg.value.width;
+  canvasRef.value.height = currentImg.value.height;
+  ctx.clearRect(0, 0, currentImg.value.width, currentImg.value.height);
+  ctx.drawImage(currentImg.value, 0, 0);
+}
+
+watch(() => props.resultDataUrl, (url) => {
+  if (!url) {
+    currentImg.value = null;
+    return;
+  }
   const img = new Image();
   img.onload = () => {
-    canvasRef.value!.width = img.width;
-    canvasRef.value!.height = img.height;
-    ctx.clearRect(0, 0, img.width, img.height);
-    ctx.drawImage(img, 0, 0);
+    currentImg.value = img;
+    drawImage();
   };
   img.src = url;
+});
+
+// Redraw when switching modes or when canvas is ready
+watch([() => props.mockupMode, canvasRef], () => {
+  // Use nextTick or a small timeout to ensure the DOM has updated
+  setTimeout(drawImage, 0);
 });
 </script>
 
