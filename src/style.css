@@ -785,6 +785,57 @@ body {
 }
 
 /* ============================================================
+   Garment Mockup Mode
+   ============================================================ */
+.preview-area--mockup .preview-canvas-wrapper {
+  background-color: #f8fafc !important; /* Light slate background for the scene */
+  overflow: hidden;
+}
+
+.dark .preview-area--mockup .preview-canvas-wrapper {
+  background-color: #0f172a !important; /* Dark slate for dark mode */
+}
+
+.mockup-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease-out;
+}
+
+.mockup-shirt {
+  width: 85%;
+  height: 85%;
+  max-width: 800px;
+  filter: drop-shadow(0 15px 30px rgba(0,0,0,0.12));
+}
+
+.mockup-design-area {
+  position: absolute;
+  top: 48%; /* Chest position */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28%; /* Width relative to shirt */
+  aspect-ratio: 1; /* Keep it square for the design zone */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.mockup-design-area .preview-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+  /* Give it a slight "print on fabric" look */
+  opacity: 0.98;
+}
+
+/* ============================================================
    Export Buttons
    ============================================================ */
 .export-buttons {

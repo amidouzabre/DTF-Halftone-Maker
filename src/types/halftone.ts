@@ -53,6 +53,8 @@ export interface HalftoneSettings {
   supportColor: string;
   /** Show checkerboard behind the image in preview */
   showCheckerboard: boolean;
+  /** Enable garment mockup mode */
+  mockupMode: boolean;
 }
 
 /**
@@ -82,6 +84,7 @@ export const DEFAULT_SETTINGS: HalftoneSettings = {
   brightnessBoost: 1.0,
   supportColor: '#1a1a1a',
   showCheckerboard: true,
+  mockupMode: false,
 };
 
 /**

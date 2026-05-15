@@ -221,6 +221,12 @@ function updateManual(key: string, value: number) {
         </div>
         <div class="control-row">
           <label class="toggle-row">
+            <input type="checkbox" :checked="settings.mockupMode" @change="update({ mockupMode: ($event.target as HTMLInputElement).checked })" class="toggle-checkbox" />
+            <span class="toggle-label">Mode Mockup (T-shirt)</span>
+          </label>
+        </div>
+        <div class="control-row">
+          <label class="toggle-row">
             <input type="checkbox" :checked="settings.showCheckerboard" @change="update({ showCheckerboard: ($event.target as HTMLInputElement).checked })" class="toggle-checkbox" />
             <span class="toggle-label">Afficher le damier</span>
           </label>

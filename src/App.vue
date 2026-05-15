@@ -123,6 +123,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown));
           :hasImage="!!imageInfo"
           :supportColor="settings.supportColor"
           :showCheckerboard="settings.showCheckerboard"
+          :mockupMode="settings.mockupMode"
         />
       </main>
     </div>
