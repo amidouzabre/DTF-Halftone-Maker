@@ -99,7 +99,7 @@ export interface HalftoneSettings {
  */
 export const DEFAULT_SETTINGS: HalftoneSettings = {
   gridSize: 1,
-  angle: 18,
+  angle: 23,
   maxDotRadius: 1,
   density: 2.0,
   threshold: 1.0,
@@ -113,7 +113,7 @@ export const DEFAULT_SETTINGS: HalftoneSettings = {
   dotShape: 'round',
   preserveColor: true,
   makeBlackTransparent: true,
-  makeWhiteTransparent: true,
+  makeWhiteTransparent: false,
   blackThreshold: 0.05,
   supersample: 1,
   maxResolution: 2500,
@@ -125,7 +125,7 @@ export const DEFAULT_SETTINGS: HalftoneSettings = {
   mockupMode: false,
   levelsBlack: 2,
   levelsMid: 0.86,
-  levelsWhite: 191,
+  levelsWhite: 255,
   outputLevelsBlack: 1,
   outputLevelsWhite: 255,
   frequency: 300,
@@ -133,7 +133,7 @@ export const DEFAULT_SETTINGS: HalftoneSettings = {
   method: 'halftone',
   ditherType: 'floyd-steinberg',
   thresholdLevel: 128,
-  whiteThreshold: 0.95,
+  whiteThreshold: 0.99,
   ditherScale: 1,
 };
 
