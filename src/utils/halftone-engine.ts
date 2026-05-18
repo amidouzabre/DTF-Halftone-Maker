@@ -65,96 +65,123 @@ export function processHalftone(
     return processDither(sourceData, width, height, settings, onProgress);
   }
   
-  // Default Halftone logic
+  // Photoshop-style continuous spot function (Mask method)
+  const outputData = new Uint8ClampedArray(width * height * 4);
+  
   const effectiveGridSize = settings.useManualValues ? settings.manualValues.size : settings.gridSize;
   const effectiveDensity = settings.useManualValues ? settings.manualValues.density : settings.density;
   const effectiveThreshold = settings.useManualValues ? settings.manualValues.threshold : settings.threshold;
+  
   const gridSize = Math.max(1, effectiveGridSize);
+  // frequency (period = gridSize pixels)
+  const freq = (2 * Math.PI) / gridSize;
   const angleRad = (settings.angle * Math.PI) / 180;
-  const maxRadius = settings.maxDotRadius;
-  const density = effectiveDensity;
-  const threshold = effectiveThreshold;
-
-  let useCanvas = false;
-  let canvas: OffscreenCanvas | null = null;
-  let ctx: OffscreenCanvasRenderingContext2D | null = null;
-
-  try {
-    canvas = new OffscreenCanvas(width, height);
-    ctx = canvas.getContext('2d');
-    if (ctx) {
-      useCanvas = true;
-      ctx.clearRect(0, 0, width, height);
-    }
-  } catch {}
-
-  const outputData = new Uint8ClampedArray(width * height * 4);
   const cos = Math.cos(-angleRad);
   const sin = Math.sin(-angleRad);
-  const cosPos = Math.cos(angleRad);
-  const sinPos = Math.sin(angleRad);
+  
+  // Anti-aliasing margin based on grid size for smooth dot edges
+  const aa = Math.min(0.2, 1.5 / gridSize);
 
-  const corners = [{ x: 0, y: 0 }, { x: width, y: 0 }, { x: width, y: height }, { x: 0, y: height }];
-  let minGx = Infinity, maxGx = -Infinity, minGy = Infinity, maxGy = -Infinity;
-  for (const corner of corners) {
-    const gx = corner.x * cos - corner.y * sin;
-    const gy = corner.x * sin + corner.y * cos;
-    minGx = Math.min(minGx, gx); maxGx = Math.max(maxGx, gx);
-    minGy = Math.min(minGy, gy); maxGy = Math.max(maxGy, gy);
-  }
-
-  const startCol = Math.floor(minGx / gridSize) - 1;
-  const endCol = Math.ceil(maxGx / gridSize) + 1;
-  const startRow = Math.floor(minGy / gridSize) - 1;
-  const endRow = Math.ceil(maxGy / gridSize) + 1;
-  const totalRows = endRow - startRow;
-  const dotDrawer = getDotDrawer(settings.dotShape);
-
-  for (let row = startRow; row <= endRow; row++) {
-    if (onProgress && (row - startRow) % 4 === 0) {
-      onProgress(Math.min(100, Math.round(((row - startRow) / totalRows) * 100)));
+  for (let y = 0; y < height; y++) {
+    if (onProgress && y % 50 === 0) {
+      onProgress(Math.min(100, Math.round((y / height) * 100)));
     }
-    for (let col = startCol; col <= endCol; col++) {
-      const gcx = (col + 0.5) * gridSize;
-      const gcy = (row + 0.5) * gridSize;
-      const imgX = gcx * cosPos - gcy * sinPos;
-      const imgY = gcx * sinPos + gcy * cosPos;
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const r = sourceData[idx];
+      const g = sourceData[idx + 1];
+      const b = sourceData[idx + 2];
+      const a = sourceData[idx + 3];
 
-      if (imgX < -gridSize || imgX >= width + gridSize || imgY < -gridSize || imgY >= height + gridSize) continue;
-
-      const avg = averageColor(sourceData, width, height, imgX - gridSize / 2, imgY - gridSize / 2, gridSize, gridSize);
-      if (avg.a < 10) continue;
-
-      const adjustedLum = applyLevels(avg.lum, settings.levelsBlack, settings.levelsWhite, settings.levelsMid, settings.outputLevelsBlack, settings.outputLevelsWhite);
-      const rawIntensity = settings.targetBackground === 'dark' ? adjustedLum : 1 - adjustedLum;
-      const intensity = Math.min(1, rawIntensity * settings.brightnessBoost);
-      
-      if (intensity < (1 - threshold)) continue;
-
-      let dotRadius = maxRadius * Math.sqrt(intensity) * density;
-      dotRadius = Math.max(0.5, Math.min(dotRadius, maxRadius));
-
-      if (settings.makeBlackTransparent && isNearBlack(avg.r, avg.g, avg.b, settings.blackThreshold)) continue;
-      if (settings.makeWhiteTransparent && isNearWhite(avg.r, avg.g, avg.b, settings.whiteThreshold)) continue;
-
-      const defaultInk = settings.targetBackground === 'dark' ? 255 : 0;
-      const dotR = settings.preserveColor ? Math.round(applyLevels(avg.vR / 255, settings.levelsBlack, settings.levelsWhite, settings.levelsMid, settings.outputLevelsBlack, settings.outputLevelsWhite) * 255) : defaultInk;
-      const dotG = settings.preserveColor ? Math.round(applyLevels(avg.vG / 255, settings.levelsBlack, settings.levelsWhite, settings.levelsMid, settings.outputLevelsBlack, settings.outputLevelsWhite) * 255) : defaultInk;
-      const dotB = settings.preserveColor ? Math.round(applyLevels(avg.vB / 255, settings.levelsBlack, settings.levelsWhite, settings.levelsMid, settings.outputLevelsBlack, settings.outputLevelsWhite) * 255) : defaultInk;
-      const dotA = Math.round(avg.a);
-
-      if (useCanvas && ctx) {
-        ctx.fillStyle = `rgba(${dotR}, ${dotG}, ${dotB}, ${dotA / 255})`;
-        dotDrawer(ctx, imgX, imgY, dotRadius, angleRad);
+      // Copy original RGB if preserving color
+      if (settings.preserveColor) {
+        outputData[idx] = r;
+        outputData[idx + 1] = g;
+        outputData[idx + 2] = b;
       } else {
-        drawDotPixels(outputData, width, height, imgX, imgY, dotRadius, dotR, dotG, dotB, dotA, settings.dotShape, angleRad);
+        const ink = settings.targetBackground === 'dark' ? 255 : 0;
+        outputData[idx] = outputData[idx + 1] = outputData[idx + 2] = ink;
       }
+
+      if (a < 10) {
+        outputData[idx + 3] = 0;
+        continue;
+      }
+
+      // 1. Grayscale luminance of original pixel
+      const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      
+      // 2. Levels Adjustment
+      const adjustedLum = applyLevels(lum, settings.levelsBlack, settings.levelsWhite, settings.levelsMid, settings.outputLevelsBlack, settings.outputLevelsWhite);
+      
+      // 3. Modulate for dark/light garment mask logic
+      // For dark background: white stays opaque (rawIntensity = adjustedLum)
+      // For light background: black stays opaque (rawIntensity = 1 - adjustedLum)
+      const rawIntensity = settings.targetBackground === 'dark' ? adjustedLum : 1 - adjustedLum;
+      
+      // Apply density and brightness boosts to get the final threshold comparison value
+      const intensity = Math.min(1, Math.max(0, rawIntensity * settings.brightnessBoost * effectiveDensity));
+
+      // Quick aborts based on threshold setting (acts as a hard cutoff)
+      if (intensity < (1 - effectiveThreshold)) {
+        outputData[idx + 3] = 0;
+        continue;
+      }
+
+      // Check near black/white transparency exceptions
+      if (settings.makeBlackTransparent && isNearBlack(r, g, b, settings.blackThreshold)) {
+        outputData[idx + 3] = 0;
+        continue;
+      }
+      if (settings.makeWhiteTransparent && isNearWhite(r, g, b, settings.whiteThreshold)) {
+        outputData[idx + 3] = 0;
+        continue;
+      }
+
+      // 4. Generate spot function value
+      const rotX = x * cos - y * sin;
+      const rotY = x * sin + y * cos;
+      let spot = 0;
+      
+      switch (settings.dotShape) {
+        case 'line':
+          spot = Math.cos(rotX * freq);
+          break;
+        case 'ellipse':
+          spot = (Math.cos(rotX * freq) + Math.cos(rotY * freq * 0.5)) / 2;
+          break;
+        case 'square':
+          // Math.cos(x) * Math.cos(y) creates square/diamond dots
+          spot = Math.cos(rotX * freq) * Math.cos(rotY * freq);
+          break;
+        case 'diamond':
+          spot = Math.abs(Math.cos(rotX * freq)) + Math.abs(Math.cos(rotY * freq)) - 1;
+          break;
+        case 'round':
+        default:
+          spot = (Math.cos(rotX * freq) + Math.cos(rotY * freq)) / 2;
+          break;
+      }
+
+      // Map spot from [-1, 1] to [0, 1]
+      const spotThreshold = (spot + 1) / 2;
+      
+      // 5. Evaluate pixel masking with Anti-aliasing (smoothstep)
+      let alphaMultiplier = 1;
+      
+      if (intensity < spotThreshold - aa) {
+        alphaMultiplier = 0;
+      } else if (intensity > spotThreshold + aa) {
+        alphaMultiplier = 1;
+      } else {
+        const t = (intensity - (spotThreshold - aa)) / (aa * 2);
+        alphaMultiplier = t * t * (3 - 2 * t);
+      }
+      
+      outputData[idx + 3] = Math.round(a * alphaMultiplier);
     }
   }
 
-  if (useCanvas && ctx && canvas) {
-    return ctx.getImageData(0, 0, width, height).data;
-  }
   return outputData;
 }
 
