@@ -1,0 +1,32 @@
+1 - Modifer la taille de l'image dans le menu Image->Taille de l'image Alt+Ctrl+I
+	Mettre la resolution a 300dpi
+
+2- Dupliquer l'image depuis le menu Image
+
+
+Sur la Copie obtenue a l'étape 2.
+
+3- Passer la copie en Niveau de gris depuis le Menu  Image-Mode>Niveau de Gris
+4- Image->Reglage->Niveau   Pour changer les niveaux en jouant sur les niveaux
+5- Image->Mode->Bitmap : mettre la sortie a 300 et le mode a "Trame de demi-teintes"
+6- Dans la fenetre de Trame de demi-teintes : 
+	- la Lineature entre 30 et 45
+	- Angle 22.5
+	- Forme Cercle
+7- Passer l'image en Niveau de Gris et Selectionner et compier tout : Ctrl+A et Ctrl+C
+
+Revenir l'image originale
+8- Creer un Mask de fusion
+9- Alt+ clique sur le masque de fucion
+10- Ctrl+V pour coler
+11 Cliquer sur le calque de l'image pour voir le resultat
+
+
+Si nous voulons une impression sur fond particulier:
+- Creer un calque de cette couleur en le remplissant et creer un copie de ce calque
+- mettre l'image orignale entre les deux calques de la couleur de fond
+- Dans le menu des calques selectionner "Difference" pour eliminer les couleurs de fond de l'image.
+- Selectionner les trois calques et les fusionner
+- Dupliquer le calque obtenu dans un Nouveau Document
+- Faire l'etape 3 
+
